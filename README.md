@@ -107,6 +107,39 @@ The agent uses these tools automatically behind the scenes to interact with your
 
 ---
 
+## 📂 How to use this on your own codebase
+
+If you want the agent to work on a different project (your own repository):
+
+### Option A: The Subfolder Way (Easiest)
+1. Clone this repository into a folder called `agent` inside your own project:
+   ```bash
+   git clone https://github.com/Electroiscoding/reactsystemlearning1.git agent
+   ```
+2. Open the `agent/.env` file and add the `WORKDIR` variable pointing to your project (the parent folder):
+   ```env
+   API_KEY=your_openrouter_key
+   BASE_URL=https://openrouter.ai/api/v1
+   MODEL=openrouter/free
+   WORKDIR=../
+   ```
+3. Run the agent inside the `agent` folder:
+   ```bash
+   cd agent && npm install && npm start
+   ```
+
+*Because `WORKDIR=../` is set, the agent will automatically read, write, and run commands in your parent project folder!*
+
+---
+
+### Option B: The Copy-Paste Way
+Just copy the `src/` folder, `.env` file, and merge the dependencies in `package.json` directly into the root folder of your project. Then run:
+```bash
+node src/index.js "Find all bugs"
+```
+
+---
+
 ## 🔒 Safety & Guardrails
 Because the agent can run commands on your terminal, we built in safety rails:
 * **Dangerous Commands**: If the agent tries to run a command containing `rm -rf`, `sudo`, `kill`, etc., it will stop and ask for your permission: `Allow execution? (y/N)`.
