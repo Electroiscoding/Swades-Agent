@@ -84,6 +84,7 @@ async function writeFileTool({ path, content }) {
 async function listDirTool({ path, recursive }) {
   const fullPath = resolvePath(path);
   const entries = [];
+  const agentRoot = process.cwd(); // The agent's own root folder
 
   async function walk(dir, depth = 0) {
     const items = await readdir(dir, { withFileTypes: true });
@@ -92,6 +93,14 @@ async function listDirTool({ path, recursive }) {
       if (item.name === "node_modules" || item.name === ".git") continue;
 
       const itemPath = resolve(dir, item.name);
+
+      // Skip the agent's own installation folder to prevent the LLM from getting trapped/distracted
+      // Only apply this skip if the agent is installed in a strict subdirectory of the workspace
+      const isStrictSubDir = agentRoot.startsWith(fullPath + "/") || (fullPath !== agentRoot && agentRoot.startsWith(fullPath));
+      if (isStrictSubDir && (itemPath === agentRoot || itemPath.startsWith(agentRoot + "/"))) {
+        continue;
+      }
+
       const rel = relative(fullPath, itemPath);
       const prefix = "  ".repeat(depth);
       const isDir = item.isDirectory();
@@ -146,10 +155,20 @@ async function runCommandTool({ command, cwd }) {
 
 async function grepSearchTool({ pattern, path, include }) {
   const fullPath = resolvePath(path);
+  const agentRoot = process.cwd();
 
   // Build grep command
   let cmd = `grep -rnI --color=never`;
   if (include) cmd += ` --include='${include}'`;
+
+  // Exclude the agent folder if it lies inside the search path
+  if (agentRoot.startsWith(fullPath)) {
+    const relAgentFolder = relative(fullPath, agentRoot);
+    if (relAgentFolder && !relAgentFolder.startsWith("..")) {
+      cmd += ` --exclude-dir='${relAgentFolder}'`;
+    }
+  }
+
   cmd += ` '${pattern.replace(/'/g, "'\\''")}' '${fullPath}'`;
 
   return new Promise((res) => {

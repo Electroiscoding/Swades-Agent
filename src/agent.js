@@ -6,6 +6,7 @@
 //
 
 import chalk from "chalk";
+import { resolve } from "node:path";
 import { callLLM, MODEL } from "./llm.js";
 import { executeTool } from "./tools.js";
 import { SYSTEM_PROMPT, TOOL_SCHEMAS } from "./prompts.js";
@@ -21,9 +22,20 @@ import { getMemoryContext, recordSession } from "./memory.js";
 export async function runAgent(task, maxSteps) {
   const max = maxSteps || parseInt(process.env.MAX_STEPS) || 30;
 
+  // Resolve active workspace directory
+  const workdir = process.env.WORKDIR || process.cwd();
+  const resolvedWorkdir = resolve(workdir);
+
   // Load memory from previous sessions
   const memoryContext = await getMemoryContext();
-  const systemPrompt = SYSTEM_PROMPT + memoryContext;
+
+  // Dynamically inject workspace context into the system prompt
+  const workspaceContext = `\n\n## ACTIVE WORKSPACE
+Your active workspace directory is: ${resolvedWorkdir}
+All tool operations (reading, writing, listing, grep, shell commands) are automatically executed relative to this folder.
+Note: The agent's own code folder is completely hidden from your toolbox. You are operating strictly on the user's project codebase.`;
+
+  const systemPrompt = SYSTEM_PROMPT + workspaceContext + memoryContext;
 
   // Initialize conversation with system prompt + user task
   const messages = [
