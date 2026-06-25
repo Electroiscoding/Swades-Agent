@@ -85,3 +85,13 @@ The Director AI will supervise, evaluate, write sub-tasks, run tests, and guide 
 *   **Workspace Isolation & Self-Hiding**: If cloned as a subdirectory (like `/agent`), the agent programmatically filters out its own directory from `list_dir` and `grep_search`. The AI cannot see, read, or alter its own code, preventing folder-trap loops.
 *   **Dangerous Command Blocking**: Shell commands containing `rm -rf`, `sudo`, `kill`, etc. require manual interactive approval.
 *   **Timeout & Step Caps**: Terminal commands automatically time out after 30 seconds. Worker agents are hard-capped at 30 steps per sub-task.
+
+---
+
+## 🆕 What's New in v2.0 (Advanced Release)
+
+*   **🎬 24/7 Autonomy (Director Loop)**: Let the agent run indefinitely under the supervision of a high-level "Director AI". Run `node src/index.js "Your Goal" --autonomous` to start.
+*   **⚡ Codebase Indexing**: The agent now automatically runs `index_codebase` at startup to create/update `.agent_index.json`, mapping your project structures so it starts with immediate context.
+*   **🔧 Partial File Patching**: The `patch_file` tool allows the AI to perform line-by-line surgical edits, preserving your exact indentation and saving thousands of tokens.
+*   **🔒 Static Syntax Guardrails**: The agent runs automatic syntax and mixed-indentation checks on every file save, self-correcting any compilation issues before they break the build.
+*   **📺 Real-time Streaming**: Enjoy a high-fidelity terminal UI where the AI's thoughts and tool arguments stream live as they are being generated.
