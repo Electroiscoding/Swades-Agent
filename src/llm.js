@@ -19,6 +19,8 @@ function getClient() {
       defaultHeaders: {
         "HTTP-Referer": "https://xerv.netlify.app/swades.html",
         "X-Title": "Swades Agent",
+        "X-OpenRouter-Title": "Swades Agent",
+        "X-OpenRouter-Categories": "cli-agent",
       },
     });
   }
