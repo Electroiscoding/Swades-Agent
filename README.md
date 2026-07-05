@@ -244,7 +244,7 @@ graph TD
 
 ---
 
-### Step-by-Step Installation Prerequisites (Spoonfeeding)
+### Step-by-Step Installation Prerequisites
 To use CUA mode under a Wayland session, follow these steps to set up your environment:
 
 #### Step 1: Ensure system python has GObject bindings
