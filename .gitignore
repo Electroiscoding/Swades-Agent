@@ -8,4 +8,3 @@ bin_local/
 *.log
 .mouse_position.json
 __pycache__/
-*.mp4
