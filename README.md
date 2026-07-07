@@ -207,11 +207,10 @@ Both `write_file` and `patch_file` run these checks immediately after writing an
 
 Swades Agent features a graphical **Computer Use Agent (CUA)** mode, empowering the AI model to interact directly with your Linux desktop. Unlike most automation systems that fail under Wayland due to legacy X11 emulation tools (`xdotool`, `pyautogui`), Swades Agent supports native GUI automation on modern **GNOME Wayland** configurations.
 
-<p align="center">
-  <video src="demo.mp4" controls width="100%" style="max-width: 800px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></video>
-  <br/>
-  <sub><i>If the video player above does not render in your markdown viewer, you can view the video file directly: <a href="demo.mp4"><b>demo.mp4</b></a></i></sub>
-</p>
+
+
+https://github.com/user-attachments/assets/d0541757-2ea1-4259-a260-75e8febef557
+
 
 
 ---
