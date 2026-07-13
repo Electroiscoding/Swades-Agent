@@ -3,7 +3,7 @@
 import chalk from "chalk";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, extname } from "node:path";
 import { callLLM, MODEL } from "./llm.js";
 import { executeTool } from "./tools.js";
 import { SYSTEM_PROMPT, TOOL_SCHEMAS } from "./prompts.js";
@@ -12,18 +12,59 @@ import { runOrchestrated } from "./orchestrator.js";
 import { runSimulated } from "./simulator.js";
 
 /**
+ * Prepare an image URL for OpenAI multimodal schema.
+ * Supports web URLs and local file paths (converting local files to base64 data URIs).
+ *
+ * @param {string} imagePathOrUrl
+ * @returns {Promise<string>}
+ */
+export async function prepareImageUrl(imagePathOrUrl) {
+  if (!imagePathOrUrl) return null;
+
+  if (imagePathOrUrl.startsWith("http://") || imagePathOrUrl.startsWith("https://") || imagePathOrUrl.startsWith("data:")) {
+    return imagePathOrUrl;
+  }
+
+  const workdir = process.env.WORKDIR || process.cwd();
+  let filePath = resolve(imagePathOrUrl);
+  if (!existsSync(filePath)) {
+    filePath = resolve(workdir, imagePathOrUrl);
+  }
+
+  if (!existsSync(filePath)) {
+    throw new Error(`Image file not found: ${imagePathOrUrl}`);
+  }
+
+  const buffer = await readFile(filePath);
+  const base64Data = buffer.toString("base64");
+
+  const ext = extname(filePath).toLowerCase();
+  let mimeType = "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") {
+    mimeType = "image/jpeg";
+  } else if (ext === ".gif") {
+    mimeType = "image/gif";
+  } else if (ext === ".webp") {
+    mimeType = "image/webp";
+  }
+
+  return `data:${mimeType};base64,${base64Data}`;
+}
+
+/**
  * Run the ReAct agentic loop.
  * @param {string} task - User's task
  * @param {number} maxSteps - Safety cap (default Infinity)
  * @param {Array} existingMessages - Continue from existing conversation
+ * @param {string} image - Optional image path or URL
  * @returns {string} - Final answer
  */
-export async function runAgent(task, maxSteps, existingMessages) {
+export async function runAgent(task, maxSteps, existingMessages, image) {
   const max = maxSteps || parseInt(process.env.MAX_STEPS) || Infinity;
   let messages = existingMessages;
 
   // ---- Orchestrator gate (only for fresh top-level tasks) ----
-  if (!existingMessages && task && !task.startsWith("[SUBAGENT:") && !task.startsWith("[SIMULATION")) {
+  if (!existingMessages && task && !task.startsWith("[SUBAGENT:") && !task.startsWith("[SIMULATION") && !image) {
     const workdir = process.env.WORKDIR || process.cwd();
     const resolvedWorkdir = resolve(workdir);
 
@@ -70,9 +111,23 @@ export async function runAgent(task, maxSteps, existingMessages) {
 
     const workspaceContext = `\n\n## WORKSPACE\nActive directory: ${resolvedWorkdir}\nAll tool operations run relative to this folder.`;
 
+    let userContent = task;
+    if (image) {
+      try {
+        const imageUrl = await prepareImageUrl(image);
+        userContent = [
+          { type: "text", text: task },
+          { type: "image_url", image_url: { url: imageUrl } }
+        ];
+      } catch (err) {
+        console.log(chalk.red(`❌ Image prepare failed: ${err.message}`));
+        throw err;
+      }
+    }
+
     messages = [
       { role: "system", content: SYSTEM_PROMPT + workspaceContext + indexContext + memoryContext },
-      { role: "user", content: task },
+      { role: "user", content: userContent },
     ];
   }
 

@@ -4,7 +4,7 @@
 
 import chalk from "chalk";
 import { resolve } from "node:path";
-import { runAgent } from "./agent.js";
+import { runAgent, prepareImageUrl } from "./agent.js";
 import { callLLM } from "./llm.js";
 import { SYSTEM_PROMPT } from "./prompts.js";
 import { getMemoryContext } from "./memory.js";
@@ -27,7 +27,7 @@ RULES:
  * @param {number} maxCycles - Safety cap on Director loops
  * @returns {string} - Final completion status
  */
-export async function runDirector(globalGoal, maxCycles = Infinity) {
+export async function runDirector(globalGoal, maxCycles = Infinity, image = null) {
   console.log(chalk.green.bold("\n🎬 Director AI Activated (24/7 Autonomous Mode)"));
   console.log(chalk.dim(`   Global Goal: "${globalGoal}"`));
   console.log(chalk.dim(`   Max cycles: ${maxCycles === Infinity ? "∞" : maxCycles}\n`));
@@ -45,10 +45,24 @@ Note: The agent's own code folder is completely hidden from your toolbox. You ar
 
   const systemPrompt = SYSTEM_PROMPT + workspaceContext + memoryContext;
 
+  let userContent = globalGoal;
+  if (image) {
+    try {
+      const imageUrl = await prepareImageUrl(image);
+      userContent = [
+        { type: "text", text: globalGoal },
+        { type: "image_url", image_url: { url: imageUrl } }
+      ];
+    } catch (err) {
+      console.log(chalk.red(`❌ Image prepare failed: ${err.message}`));
+      throw err;
+    }
+  }
+
   // Initialize the continuous conversation history for the Worker Agent
   const messages = [
     { role: "system", content: systemPrompt },
-    { role: "user", content: globalGoal },
+    { role: "user", content: userContent },
   ];
 
   for (let cycle = 1; cycle <= maxCycles; cycle++) {

@@ -16,7 +16,24 @@ async function getTaskAndMode() {
   const isAutonomous = args.includes("--autonomous") || args.includes("-a");
   const forceCUA = args.includes("--cua") || args.includes("-c");
 
-  const taskArgs = args.filter(a => !a.startsWith("-"));
+  let image = null;
+  const imgIdx = args.findIndex(a => a === "--image" || a === "-i");
+  if (imgIdx !== -1 && imgIdx + 1 < args.length) {
+    image = args[imgIdx + 1];
+  }
+
+  // Filter out flags and their parameters to build clean task string
+  const taskArgs = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--autonomous" || args[i] === "-a" || args[i] === "--cua" || args[i] === "-c") {
+      continue;
+    }
+    if (args[i] === "--image" || args[i] === "-i") {
+      i++; // Skip the next arg (its value)
+      continue;
+    }
+    taskArgs.push(args[i]);
+  }
   const task = taskArgs.join(" ").trim();
 
   if (task) {
@@ -25,7 +42,7 @@ async function getTaskAndMode() {
     if (isCUA && !forceCUA) {
       console.log(chalk.dim("   (Auto-detected CUA mode from task keywords)"));
     }
-    return { task, isAutonomous, isCUA };
+    return { task, image, isAutonomous, isCUA };
   }
 
   // Interactive prompt
@@ -33,13 +50,16 @@ async function getTaskAndMode() {
   return new Promise((res) => {
     console.log(chalk.cyan.bold("\n  Swades Agent\n"));
     rl.question(chalk.white.bold("Task → "), (taskAnswer) => {
-      rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [enter] normal → "), (modeAnswer) => {
-        rl.close();
-        const m = modeAnswer.trim().toLowerCase();
-        res({
-          task: taskAnswer.trim(),
-          isAutonomous: m === "a" || m === "autonomous",
-          isCUA: m === "c" || m === "cua",
+      rl.question(chalk.white.bold("Image path/URL (optional) → "), (imageAnswer) => {
+        rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [enter] normal → "), (modeAnswer) => {
+          rl.close();
+          const m = modeAnswer.trim().toLowerCase();
+          res({
+            task: taskAnswer.trim(),
+            image: imageAnswer.trim() || null,
+            isAutonomous: m === "a" || m === "autonomous",
+            isCUA: m === "c" || m === "cua",
+          });
         });
       });
     });
@@ -47,7 +67,7 @@ async function getTaskAndMode() {
 }
 
 async function main() {
-  const { task, isAutonomous, isCUA } = await getTaskAndMode();
+  const { task, image, isAutonomous, isCUA } = await getTaskAndMode();
 
   if (!task) {
     console.log(chalk.red("No task. Exiting."));
@@ -70,9 +90,9 @@ async function main() {
     if (isCUA) {
       await runCUA(task);
     } else if (isAutonomous) {
-      await runDirector(task);
+      await runDirector(task, Infinity, image);
     } else {
-      await runAgent(task);
+      await runAgent(task, null, null, image);
     }
   } catch (err) {
     console.error(chalk.red(`Fatal: ${err.message}`));

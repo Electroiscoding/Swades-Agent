@@ -25,7 +25,29 @@ Swades Agent is an open-source, terminal-native autonomous AI coding agent built
 
 It works with any **OpenAI-compatible API** (OpenAI, OpenRouter, Groq, Ollama, etc.), streams tokens to the terminal in real-time as the model thinks, and runs automatic syntax validation on every file it writes.
 
-No GUI. No cloud lock-in. No build step. ~800 lines of plain Node.js.
+No GUI. No cloud lock-in. No build step. **~3,500 total lines of code** (~2,600+ lines of clean Node.js and ~900 lines of Python helpers).
+
+<details>
+<summary><b>📊 Codebase Line Count Breakdown</b></summary>
+
+| File | Language | Lines of Code | Description |
+| :--- | :--- | :---: | :--- |
+| [`src/cua.js`](file:///home/soham/reactsystemlearning1/src/cua.js) | JavaScript | 596 | CUA desktop orchestrator |
+| [`src/simulator.js`](file:///home/soham/reactsystemlearning1/src/simulator.js) | JavaScript | 505 | Sandbox Simulation Engine |
+| [`src/tools.js`](file:///home/soham/reactsystemlearning1/src/tools.js) | JavaScript | 502 | File operations, syntax checking, and shell tools |
+| [`src/orchestrator.js`](file:///home/soham/reactsystemlearning1/src/orchestrator.js) | JavaScript | 234 | Parent orchestrator, parallel subagents, worktree manager |
+| [`src/subagent.js`](file:///home/soham/reactsystemlearning1/src/subagent.js) | JavaScript | 177 | Subagent lifecycle and setup |
+| [`src/agent.js`](file:///home/soham/reactsystemlearning1/src/agent.js) | JavaScript | 140 | Core ReAct agentic loop |
+| [`src/prompts.js`](file:///home/soham/reactsystemlearning1/src/prompts.js) | JavaScript | 120 | System prompts & function-calling schemas |
+| [`src/llm.js`](file:///home/soham/reactsystemlearning1/src/llm.js) | JavaScript | 107 | OpenAI API wrapper & token streaming client |
+| [`src/director.js`](file:///home/soham/reactsystemlearning1/src/director.js) | JavaScript | 95 | Autonomous Director loop supervisor |
+| [`src/index.js`](file:///home/soham/reactsystemlearning1/src/index.js) | JavaScript | 83 | CLI entry point and argument parser |
+| [`src/memory.js`](file:///home/soham/reactsystemlearning1/src/memory.js) | JavaScript | 79 | Session persistence & context injection |
+| [`src/cua_helper.py`](file:///home/soham/reactsystemlearning1/src/cua_helper.py) | Python | 768 | GNOME Mutter RDP/ScreenCast Wayland automation helper |
+| [`src/take_portal_screenshot.py`](file:///home/soham/reactsystemlearning1/src/take_portal_screenshot.py) | Python | 111 | Pipewire video stream frame grabber |
+| **Total** | | **3,517** | |
+
+</details>
 
 ---
 
@@ -175,6 +197,26 @@ node src/index.js "Refactor the entire codebase to TypeScript and verify it comp
 ```
 
 The `--autonomous` flag (or `-a`) activates the Director loop. The Director runs for up to 5 cycles by default.
+
+### Image & Multimodal Support
+
+You can attach local images or remote web URLs to your task prompts. This is useful for providing design mockups, wireframes, screenshots of layout bugs, or architecture diagrams directly to the agent.
+
+**Interactive prompt:**
+```bash
+npm start
+# 1. Enter your task
+# 2. Enter the local path or remote URL to the image when prompted (e.g. `arch.png`)
+```
+
+**Direct task via argument (using `--image` or `-i`):**
+```bash
+# Using a local image
+node src/index.js "Describe this architecture diagram in detail" --image arch.png
+
+# Using a remote web image URL
+node src/index.js "Analyze this UI mockup and implement the styled header" -i https://example.com/mockup.png
+```
 
 ---
 
