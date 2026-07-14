@@ -7,14 +7,51 @@ import { runAgent } from "./agent.js";
 import { runDirector } from "./director.js";
 import { runCUA } from "./cua.js";
 import { executeTool } from "./tools.js";
+import { callLLM } from "./llm.js";
 
-// CUA-related keywords for auto-detection
-const CUA_HINTS = ["click", "open app", "browser", "screen", "desktop", "gui", "window", "mouse", "type in", "navigate to", "fill form", "screenshot"];
+async function detectModeWithAI(task) {
+  if (!process.env.API_KEY) {
+    return { isAutonomous: false, isCUA: false };
+  }
+
+  console.log(chalk.dim("🤖 AI is deciding the optimal execution mode..."));
+
+  const systemPrompt = `You are the execution mode classifier for Swades Agent.
+Your job is to classify the user's task into one of the following execution modes:
+1. "cua" (Computer Use Agent): Use this if the task requires GUI automation, desktop interaction, web browsing, clicking, screenshots, mouse/keyboard inputs, or opening applications (e.g. Chrome, Settings, VSCode UI, file manager).
+2. "autonomous" (Director Mode): Use this if the task is complex, multi-file, requires planning, self-correction, multiple steps of execution, or building a feature/debugging code (e.g. "implement feature X", "debug the test failures in this directory", "refactor the database helper").
+3. "normal": Use this for simple, single-step tasks that can be done in a single run (e.g. "explain how function X works", "format this JSON", "what is the date", "run git status").
+
+Response MUST be a single word, one of: "cua", "autonomous", "normal". Do not write anything else.`;
+
+  try {
+    const response = await callLLM([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Task: ${task}` }
+    ]);
+    
+    const decision = response.content?.trim().toLowerCase() || "normal";
+    
+    if (decision.includes("cua")) {
+      console.log(chalk.cyan("   (AI classified task: CUA mode)"));
+      return { isAutonomous: false, isCUA: true };
+    } else if (decision.includes("autonomous")) {
+      console.log(chalk.cyan("   (AI classified task: Autonomous mode)"));
+      return { isAutonomous: true, isCUA: false };
+    } else {
+      console.log(chalk.cyan("   (AI classified task: Normal mode)"));
+      return { isAutonomous: false, isCUA: false };
+    }
+  } catch (err) {
+    console.log(chalk.dim(`   (AI mode classification failed: ${err.message}. Defaulting to Normal mode.)`));
+    return { isAutonomous: false, isCUA: false };
+  }
+}
 
 async function getTaskAndMode() {
   const args = process.argv.slice(2);
-  const isAutonomous = args.includes("--autonomous") || args.includes("-a");
-  const forceCUA = args.includes("--cua") || args.includes("-c");
+  const hasAutonomousFlag = args.includes("--autonomous") || args.includes("-a");
+  const hasCuaFlag = args.includes("--cua") || args.includes("-c");
 
   let image = null;
   const imgIdx = args.findIndex(a => a === "--image" || a === "-i");
@@ -37,12 +74,14 @@ async function getTaskAndMode() {
   const task = taskArgs.join(" ").trim();
 
   if (task) {
-    // Auto-detect CUA from task text if not explicitly set
-    const isCUA = forceCUA || CUA_HINTS.some(h => task.toLowerCase().includes(h));
-    if (isCUA && !forceCUA) {
-      console.log(chalk.dim("   (Auto-detected CUA mode from task keywords)"));
+    if (hasAutonomousFlag) {
+      return { task, image, isAutonomous: true, isCUA: false };
     }
-    return { task, image, isAutonomous, isCUA };
+    if (hasCuaFlag) {
+      return { task, image, isAutonomous: false, isCUA: true };
+    }
+    const aiMode = await detectModeWithAI(task);
+    return { task, image, ...aiMode };
   }
 
   // Interactive prompt
@@ -51,15 +90,18 @@ async function getTaskAndMode() {
     console.log(chalk.cyan.bold("\n  Swades Agent\n"));
     rl.question(chalk.white.bold("Task → "), (taskAnswer) => {
       rl.question(chalk.white.bold("Image path/URL (optional) → "), (imageAnswer) => {
-        rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [enter] normal → "), (modeAnswer) => {
+        rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [enter] auto-detect → "), async (modeAnswer) => {
           rl.close();
           const m = modeAnswer.trim().toLowerCase();
-          res({
-            task: taskAnswer.trim(),
-            image: imageAnswer.trim() || null,
-            isAutonomous: m === "a" || m === "autonomous",
-            isCUA: m === "c" || m === "cua",
-          });
+          const taskStr = taskAnswer.trim();
+          if (m === "c" || m === "cua") {
+            res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: false, isCUA: true });
+          } else if (m === "a" || m === "autonomous") {
+            res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: true, isCUA: false });
+          } else {
+            const aiMode = await detectModeWithAI(taskStr);
+            res({ task: taskStr, image: imageAnswer.trim() || null, ...aiMode });
+          }
         });
       });
     });
