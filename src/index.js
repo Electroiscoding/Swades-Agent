@@ -52,6 +52,8 @@ async function getTaskAndMode() {
   const args = process.argv.slice(2);
   const hasAutonomousFlag = args.includes("--autonomous") || args.includes("-a");
   const hasCuaFlag = args.includes("--cua") || args.includes("-c");
+  const hasNormalFlag = args.includes("--normal") || args.includes("-n");
+  const hasSubagentsFlag = args.includes("--subagents") || args.includes("-s");
 
   let image = null;
   const imgIdx = args.findIndex(a => a === "--image" || a === "-i");
@@ -62,7 +64,12 @@ async function getTaskAndMode() {
   // Filter out flags and their parameters to build clean task string
   const taskArgs = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--autonomous" || args[i] === "-a" || args[i] === "--cua" || args[i] === "-c") {
+    if (
+      args[i] === "--autonomous" || args[i] === "-a" ||
+      args[i] === "--cua" || args[i] === "-c" ||
+      args[i] === "--normal" || args[i] === "-n" ||
+      args[i] === "--subagents" || args[i] === "-s"
+    ) {
       continue;
     }
     if (args[i] === "--image" || args[i] === "-i") {
@@ -80,6 +87,13 @@ async function getTaskAndMode() {
     if (hasCuaFlag) {
       return { task, image, isAutonomous: false, isCUA: true };
     }
+    if (hasSubagentsFlag) {
+      process.env.SUBAGENTS_ONLY = "true";
+      return { task, image, isAutonomous: false, isCUA: false };
+    }
+    if (hasNormalFlag) {
+      return { task, image, isAutonomous: false, isCUA: false };
+    }
     const aiMode = await detectModeWithAI(task);
     return { task, image, ...aiMode };
   }
@@ -90,7 +104,7 @@ async function getTaskAndMode() {
     console.log(chalk.cyan.bold("\n  Swades Agent\n"));
     rl.question(chalk.white.bold("Task → "), (taskAnswer) => {
       rl.question(chalk.white.bold("Image path/URL (optional) → "), (imageAnswer) => {
-        rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [enter] auto-detect → "), async (modeAnswer) => {
+        rl.question(chalk.white.bold("Mode? [c]ua / [a]utonomous / [s]ubagents (no simulation) / [n]ormal / [enter] auto-detect → "), async (modeAnswer) => {
           rl.close();
           const m = modeAnswer.trim().toLowerCase();
           const taskStr = taskAnswer.trim();
@@ -98,6 +112,11 @@ async function getTaskAndMode() {
             res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: false, isCUA: true });
           } else if (m === "a" || m === "autonomous") {
             res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: true, isCUA: false });
+          } else if (m === "s" || m === "subagents") {
+            process.env.SUBAGENTS_ONLY = "true";
+            res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: false, isCUA: false });
+          } else if (m === "n" || m === "normal") {
+            res({ task: taskStr, image: imageAnswer.trim() || null, isAutonomous: false, isCUA: false });
           } else {
             const aiMode = await detectModeWithAI(taskStr);
             res({ task: taskStr, image: imageAnswer.trim() || null, ...aiMode });

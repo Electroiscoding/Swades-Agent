@@ -56,8 +56,13 @@ HIGH format: {"level": "HIGH", "subtasks": [{"label": "short-name", "description
 export async function evaluateComplexity(task) {
   console.log(chalk.dim("   🧠 Evaluating task complexity..."));
 
+  let systemPrompt = CLASSIFIER_PROMPT;
+  if (process.env.SUBAGENTS_ONLY === "true") {
+    systemPrompt += "\n\nCRITICAL: The user has explicitly enabled subagents-only execution. You MUST classify this task as HIGH complexity and decompose it into 2-5 concrete subtasks.";
+  }
+
   const messages = [
-    { role: "system", content: CLASSIFIER_PROMPT },
+    { role: "system", content: systemPrompt },
     { role: "user", content: `Task: ${task}` },
   ];
 
@@ -207,6 +212,18 @@ export async function runOrchestrated(task, baseDir) {
   const mergeResult = await mergeDiffs(subagentResults, baseDir);
 
   // Phase 3: Run simulation on the merged state to verify and optimize
+  if (process.env.SUBAGENTS_ONLY === "true") {
+    console.log(chalk.cyan.bold("\n🧪 Post-merge simulation skipped (Subagents-only mode enabled)."));
+    const summary = [
+      `🔷 Orchestrated execution complete.`,
+      `   Subagents: ${subagentResults.length} spawned, ${subagentResults.filter(r => r.success).length} succeeded`,
+      `   Merge: ${mergeResult.merged} applied, ${mergeResult.failed} failed`,
+      `   Simulation: (skipped)`,
+    ].join("\n");
+    console.log(chalk.green.bold("\n" + summary + "\n"));
+    return summary;
+  }
+
   console.log(chalk.cyan.bold("\n🧪 Post-merge simulation for verification & optimization..."));
   const verificationTask = `Verify and optimize the following changes that were just applied to the codebase:
 
