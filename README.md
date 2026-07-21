@@ -12,6 +12,7 @@
 <p align="center">
   <a href="#setup--installation">Setup</a> ·
   <a href="#how-to-run">How to Run</a> ·
+  <a href="walkthrough.md">Walkthrough & Feature Guide</a> ·
   <a href="#tools">Tools</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#safety--guardrails">Safety</a>
