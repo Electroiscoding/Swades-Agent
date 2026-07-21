@@ -1,39 +1,126 @@
 # Swades Agent v3.1: The Ultimate Operational Manual & Developer Tutorial
 
-Swades Agent v3.1 is a terminal-native, autonomous coding assistant. This guide is an operational handbook written for developers. It explains how to configure, command, monitor, and troubleshoot the agent, utilizing every advanced feature to its limits.
+Welcome to the definitive user manual and operational handbook for **Swades Agent v3.1**. This document is written specifically for software developers, system administrators, and quality assurance engineers. It details exactly how to install, configure, command, interact with, and troubleshoot the agent, helping you leverage every advanced capability to its absolute limit.
 
 ---
 
-## 🚀 Quickstart & Environment Setup
+## Table of Contents
+1. [Core Philosophy & Operational Flow](#1-core-philosophy--operational-flow)
+2. [Installing and Configuring the Agent Environment](#2-installing-and-configuring-the-agent-environment)
+3. [The Command Interface (Modes & Syntax)](#3-the-command-interface-modes--syntax)
+4. [Mastering the Countdown Timer & Urgency Pressure System](#4-mastering-the-countdown-timer--urgency-pressure-system)
+5. [Operating the Self-Healing Linter & Indentation Rules](#5-operating-the-self-healing-linter--indentation-rules)
+6. [Managing Persistent Terminal Processes (`peek_terminal`)](#6-managing-persistent-terminal-processes-peek_terminal)
+7. [Wayland Native GUI (CUA Mode) Installation & Execution](#7-wayland-native-gui-cua-mode-installation--execution)
+8. [Decomposing Complex Code (Subagents & Sandboxes)](#8-decomposing-complex-code-subagents--sandboxes)
+9. [Advanced Prompting Recipes & Operational Troubleshooting](#9-advanced-prompting-recipes--operational-troubleshooting)
 
-Before launching tasks, configure your local environment correctly:
+---
 
-### Step 1: Install Dependencies
-Ensure you have **Node.js v18 or later** (v22+ recommended). Install the core packages:
+## 1. Core Philosophy & Operational Flow
+
+Swades Agent v3.1 is designed to operate as a terminal-native AI software engineer. Instead of using a complex visual interface or locked cloud sandboxes, the agent operates directly on your local system, reading your codebase, making surgical file edits, running shell commands, and compiling logs.
+
+### The Developer-in-the-Loop Cycle
+The agent interacts with you using a structured execution pipeline:
+1. **Goal Submission**: You submit a task via the command line or an interactive dashboard.
+2. **Codebase Indexing**: The agent scans your codebase structure to find imports, functions, and classes.
+3. **Execution Plan**: The agent lists its thoughts, schedules tool runs, and monitors time constraints.
+4. **Tool Execution**: Tools run locally. If a command runs too long, the system detaches it to prevent shell freezes.
+5. **Syntax Correction**: The linter reviews every written file, automatically fixing bracket errors, formatting issues, or JSON mistakes before the code is compiled.
+6. **Goal Achievement**: The agent presents the final code modifications and copy-pasteable verification scripts.
+
+---
+
+## 2. Installing and Configuring the Agent Environment
+
+Follow these steps to set up Swades Agent inside your project workspace.
+
+### Step 1: Install Node.js & System Prerequisites
+Ensure you have **Node.js v18 or later** installed (v22 is highly recommended for optimal performance). Verify your installation:
+```bash
+node -v
+npm -v
+```
+
+### Step 2: Install Project Dependencies
+Run the installation command inside the agent's root directory:
 ```bash
 npm install
 ```
-This installs the dependencies: `openai` (for streaming completions), `dotenv` (for environment configuration), and `chalk` (for terminal outputs).
+This command installs the three core NPM modules required by the runtime:
+- `openai`: Manages communication with OpenAI-compatible API endpoints and parses SSE token streams.
+- `dotenv`: Loads environment configurations from your local `.env` file into `process.env`.
+- `chalk`: Formats and color-codes terminal logs (e.g. countdown bars, tool indicators, errors).
 
-### Step 2: Configure the `.env` File
+### Step 3: Setup the `.env` Configuration File
 Copy the example template to create your active configuration:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and configure your LLM provider parameters:
+Open `.env` in your text editor. Below is a detailed breakdown of every environment variable you can customize:
 
 ```env
-# OpenRouter Configuration (Default)
+# ============================================================
+# SWADES AGENT ENVIRONMENT CONFIGURATION
+# ============================================================
+
+# 1. API Credentials & Endpoints
+# Your LLM provider API key (e.g., OpenRouter, OpenAI, Groq, etc.)
 API_KEY=sk-or-v1-your-key-here
+
+# The base URL of your model provider (change for Groq, Ollama, etc.)
 BASE_URL=https://openrouter.ai/api/v1
+
+# 2. Model Selections
+# The primary model used to handle task planning and code editing
 MODEL=openrouter/free
 
-# OpenAI Configuration
-API_KEY=sk-your-openai-key-here
+# The vision-capable model used to analyze screen grabs in GUI CUA mode
+CUA_MODEL=openrouter/free
+
+# 3. Execution Safety Caps
+# Maximum step iterations allowed per agent run before a forced stop
+MAX_STEPS=30
+
+# Maximum character length for tool outputs returned to the agent
+MAX_OUTPUT_LENGTH=10000
+
+# 4. Scope & Directories
+# Target workspace directory (defaults to the agent folder)
+# Set to "../" if the agent is installed as a subfolder in your project
+WORKDIR=process.cwd()
+
+# 5. Connectors
+# Optional API key for Google Maps directions queries
+GOOGLE_MAPS_API_KEY=
+```
+
+### Setup Templates for LLM Providers
+
+#### Template A: OpenRouter Setup (Default)
+```env
+API_KEY=sk-or-v1-your-openrouter-key-here
+BASE_URL=https://openrouter.ai/api/v1
+MODEL=meta-llama/llama-3.3-70b-instruct
+```
+
+#### Template B: OpenAI Setup
+```env
+API_KEY=sk-proj-your-openai-key-here
 BASE_URL=https://api.openai.com/v1
 MODEL=gpt-4o
+```
 
-# Local Ollama Configuration
+#### Template C: Groq Setup
+```env
+API_KEY=gsk_your-groq-key-here
+BASE_URL=https://api.groq.com/openai/v1
+MODEL=llama-3.3-70b-versatile
+```
+
+#### Template D: Local Ollama Setup
+```env
 API_KEY=ollama
 BASE_URL=http://localhost:11434/v1
 MODEL=qwen2.5-coder:7b
@@ -41,40 +128,41 @@ MODEL=qwen2.5-coder:7b
 
 ---
 
-## 🕹️ How to Command the Agent (CLI & Mode Selection)
+## 3. The Command Interface (Modes & Syntax)
 
-You can launch tasks interactively or pass prompts directly as arguments.
+You can launch tasks interactively or pass prompts directly as command-line arguments.
 
-### Method 1: Interactive Dashboard (Recommended)
-Run the startup script:
+### Interactive Dashboard Setup
+Run the dashboard script:
 ```bash
 npm start
 ```
-The terminal will guide you through the setup:
-1. **Task →**: Enter your coding or system task (e.g. *"implement input validation in src/auth.js"*).
-2. **Image path/URL (optional) →**: Provide a path or web URL to an image/mockup if you are running a multimodal model.
-3. **Mode? →**: Select your execution mode (or press **Enter** to let the AI auto-classify the complexity):
+The terminal will display the configuration menu:
+1. **Task →**: Enter your coding task (e.g. *"add input validation to the register form in src/auth.js"*).
+2. **Image path/URL (optional) →**: Provide a path or web URL to a layout image/mockup if you are using a vision-capable model.
+3. **Mode? →**: Select your execution mode:
    - `c` (or `cua`): Desktop GUI automation.
    - `a` (or `autonomous`): Director-supervised multi-cycle development loops.
    - `s` (or `subagents`): Runs task decomposition in parallel workspaces.
    - `n` (or `normal`): Single-run worker loop.
+   - Press **Enter** to let the AI auto-classify task complexity.
 
-### Method 2: Direct Command Invocation
-For script integration or speed, trigger tasks directly by passing CLI flags:
+### CLI Flag Specification
+Trigger tasks directly by passing CLI flags:
 ```bash
-# Run a simple refactor query
-node src/index.js "Refactor db.js to use async/await" --normal
+# Run a simple check query
+node src/index.js "Check git status and list modified files" --normal
 
 # Launch a complex feature implementation with tests
 node src/index.js "Implement a DB caching mechanism and run npm test" --autonomous
 
-# Spawns Wayland GUI mode to open a web browser
+# Spawn Wayland GUI mode to open a web browser
 node src/index.js "Open Chrome and search for Node.js docs" --cua
 ```
 
 ---
 
-## ⏰ Mastering the Dynamic Timer & Urgency Pressure System
+## 4. Mastering the Countdown Timer & Urgency Pressure System
 
 Swades Agent v3.1 features a countdown deadline manager to keep the agent focused.
 
@@ -111,7 +199,7 @@ This resets the timers and returns the agent to a CALM state.
 
 ---
 
-## 🛠️ Operating the Self-Healing Linter & Indentation Rules
+## 5. Operating the Self-Healing Linter & Indentation Rules
 
 When the agent writes files, syntax guardrails prevent code corruption.
 
@@ -137,7 +225,7 @@ Indentation warnings are only enabled for indentation-sensitive files:
 
 ---
 
-## 💻 Managing Persistent Terminal Processes (`peek_terminal`)
+## 6. Managing Persistent Terminal Processes (`peek_terminal`)
 
 If a command takes longer than 30 seconds (e.g. running a compile step or dev server), the agent detaches the task to run in the background.
 
@@ -157,7 +245,7 @@ If a background server or test loop gets stuck:
 
 ---
 
-## 🐧 Setting up GUI Computer Use Agent (CUA) Mode
+## 7. Wayland Native GUI (CUA Mode) Installation & Execution
 
 CUA mode allows the agent to control your desktop. For safety under modern Linux installations, set up the following:
 
@@ -190,7 +278,7 @@ If CUA mode clicks a frozen UI element, the system protects against loops:
 
 ---
 
-## 👥 Using Subagents & Sandbox Simulations
+## 8. Decomposing Complex Code (Subagents & Sandboxes)
 
 For complex refactoring, Swades Agent orchestrates multiple tasks in isolated workspaces.
 
@@ -210,7 +298,17 @@ Before applying modifications to your live workspace files, the engine generates
 
 ---
 
-## 🩺 Developer Troubleshooting & FAQ
+## 9. Advanced Prompting Recipes & Operational Troubleshooting
+
+Optimize agent behavior using the following structured prompts:
+
+### Caching Refactor Recipe
+> *"Scan the repository using index_codebase. Refactor src/db.js to include a cache layer. Write the cache configuration in config.json. Run node --check to verify compile status. If the step timer runs low, extend the deadline by 120 seconds."*
+
+### Background Test Compilation Recipe
+> *"Execute npm run build. If the build command takes longer than 30s and detaches, wait 15 seconds, then call peek_terminal with action='peek' to read the compilation completion logs."*
+
+### Troubleshooting FAQ
 
 #### Q: The agent gets stuck in a loop trying to patch a file.
 * **Solution**: Ensure your target block matches the file content exactly. You can read the target file using `read_file` with a line range to confirm its indentation.
