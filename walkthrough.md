@@ -362,3 +362,132 @@ Before applying modifications to your live workspace files, the engine generates
 
 #### Q: The agent fails to connect to the model.
 * **Solution**: Double-check your `API_KEY` and `BASE_URL` settings in `.env`. If using local models, ensure Ollama is running (`ollama run qwen2.5-coder:7b`).
+
+---
+
+## Chapter 10: Advanced Prompt Engineering & Intent Sculpting
+
+To extract 1000% performance from the Swades Agent, you must understand how to write robust, constraints-driven prompts.
+
+### 10.1 Multi-Constraint Framing
+Instead of simple commands, wrap your prompt with technical constraints, performance bounds, and explicit verification rules:
+> **BAD**: "Optimize the image loader."
+> **GOOD**: "Refactor the image loader in src/components/ImageLoader.js to use standard IntersectionObserver. Ensure no third-party libraries are added. After making the edit, use the `peek_terminal` tool to run the Jest test suite and confirm that no memory leak warnings are thrown in the console. Do not proceed until tests pass."
+
+### 10.2 Role & Persona Injection
+You can force the agent to adopt a specific operational stance:
+> "Act as a Senior SRE. Analyze the docker-compose.yml file. Identify any missing resource limits (CPU/Memory). Update the file adding conservative limits, then spawn a detached terminal to run `docker compose up -d` and check if all containers become healthy within 60 seconds."
+
+### 10.3 Tool-Forcing Directives
+If the agent is hesitating, mandate the tool:
+> "You MUST use the `read_file` tool to inspect `package.json` first. Then, you MUST use the `run_command` tool to execute `npm audit`."
+
+---
+
+## Chapter 11: The Subagent Swarm Configuration & Deep Dive
+
+When you run with `--subagents`, the Swades Agent scales from a single thread to a hive-mind architecture.
+
+### 11.1 Master-Worker Architecture
+1. **The Orchestrator**: The primary agent process stays in the foreground. It analyzes your complex prompt (e.g., "Migrate the entire backend from Express to Fastify").
+2. **Task Decomposition**: It splits the task into micro-tasks (e.g., "Worker A handles Auth routes, Worker B handles Database schema, Worker C handles API Gateway").
+3. **Workspace Isolation**: The Orchestrator creates `worker_A_worktree`, `worker_B_worktree` using `git worktree add`.
+4. **Parallel Execution**: Each worker operates autonomously within its isolated branch.
+5. **Reconciliation**: Once all workers finish, the Orchestrator initiates a merge sequence.
+
+### 11.2 Handling Merge Conflicts in Subagents
+If Worker A and Worker B edit the same `utils.js` file, a merge conflict occurs during reconciliation.
+- Swades detects the `<<<<<<< HEAD` markers.
+- It automatically spawns a highly focused **Merge Resolution Agent** whose sole job is to read the conflict block, understand the intent of both workers, and perform a surgical patch to resolve it.
+
+---
+
+## Chapter 12: Advanced CUA (Computer Use Agent) Mechanics
+
+CUA Mode gives Swades Agent eyes and a mouse. Here is the operational math behind its functionality.
+
+### 12.1 Vision Resolution Scaling
+The agent captures your screen using Mutter D-Bus. To save tokens:
+- **Base Resolution**: The agent scales down your desktop resolution (e.g., 4K down to 1920x1080 or 1280x720) before sending the frame to the LLM.
+- **Coordinate Mapping**: When the LLM decides to click at `(X: 500, Y: 300)` on the downscaled image, the CUA bridge mathematically scales these coordinates back to your native resolution.
+- **Multi-Monitor**: If you have multiple monitors, the agent stitches them into an ultra-wide frame. To constrain it, disable secondary monitors during CUA testing.
+
+### 12.2 The 'Lost Cursor' Recovery
+If the agent clicks outside an active window, it may trigger an OS-level focus loss.
+- **Fail-safe**: The agent periodically queries the active window title. If the title changes unexpectedly, it will trigger a `press_key: "Alt+Tab"` to recover focus.
+
+---
+
+## Chapter 13: Integrating with CI/CD Pipelines
+
+Swades Agent is not just a desktop tool; it can run entirely headlessly inside GitHub Actions or GitLab CI.
+
+### 13.1 Headless Autonomous Testing
+You can configure Swades to automatically resolve test failures on your Pull Requests.
+
+**GitHub Actions Example (`.github/workflows/swades.yml`)**:
+```yaml
+name: Swades Auto-Fix
+on: [pull_request]
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm ci
+      - run: npm test || echo "TESTS_FAILED=true" >> $GITHUB_ENV
+      - name: Run Swades to fix failures
+        if: env.TESTS_FAILED == 'true'
+        env:
+          API_KEY: ${{ secrets.OPENROUTER_KEY }}
+        run: node src/index.js "The test suite failed. Read the recent test logs, analyze the broken files, fix the syntax or logic errors, and ensure the tests pass." --autonomous
+      - name: Commit fixes
+        run: |
+          git config --global user.name "Swades Bot"
+          git commit -am "chore: auto-fixed test failures"
+          git push
+```
+
+### 13.2 Headless Constraints
+When running in CI/CD, always ensure:
+- `MAX_STEPS` is strictly limited (e.g., `MAX_STEPS=15`) to prevent GitHub Actions billing overruns.
+- `--cua` mode is NEVER used, as there is no Wayland display server active in standard Ubuntu runners.
+
+---
+
+## Chapter 14: Debugging the Agent & Telemetry Logs
+
+If the agent goes rogue or makes poor decisions, you must know how to trace its thought process.
+
+### 14.1 The `.swades_telemetry` Directory
+Every run generates a highly detailed JSON transcript in the `.swades_telemetry/` folder.
+- **`trajectory_ID.json`**: Contains every Prompt, every Tool Call, every Error, and every Raw Response from the LLM.
+- **Use Case**: If the agent hallucinates a file path, open the trajectory JSON to see exactly what context the agent was holding when it made the error.
+
+### 14.2 Log Pruning Strategy
+Over time, `.agent_terminal.log` and telemetry folders can grow to gigabytes.
+- Set up a cron job or a pre-start script to prune logs older than 7 days:
+  ```bash
+  find .swades_telemetry/ -type f -mtime +7 -delete
+  ```
+
+---
+
+## Chapter 15: Memory & Token Window Management
+
+Swades uses dynamic token sliding windows.
+
+### 15.1 Context Window Optimization
+If you dump a 10,000-line log into the prompt, the agent's context window will saturate.
+- Swades uses **Log Tail Truncation**: When reading `peek_terminal`, it only reads the *last* 800 lines of output.
+- **File Reading Limits**: When using `read_file`, it forces a line-range limit (e.g., lines 1-500).
+
+### 15.2 Managing Massive Codebases
+If you have a monorepo:
+1. Do not ask the agent to "analyze the entire repo".
+2. Instead, ask it to: *"Use the `run_command` tool with `rg` (ripgrep) to find where 'AuthContext' is defined, then only read that specific file."*
+
+---
+
+## Conclusion
+You have now reached the absolute maximum hyper-limit (1000% coverage) of the Swades Agent operational manual. You possess the knowledge to control the swarm, manipulate the Wayland CUA portals, automate CI/CD self-healing, and extract maximum token efficiency from the agent. Do not deviate from these operational guidelines.
