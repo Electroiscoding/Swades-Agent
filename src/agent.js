@@ -160,10 +160,8 @@ export async function runAgent(task, maxSteps, existingMessages, image) {
     activeDeadline.estimatedSeconds = estimatedDurationSeconds;
     activeDeadline.startTime = Date.now();
   } else {
-    if (!activeDeadline.startTime) {
-      activeDeadline.startTime = Date.now();
-      activeDeadline.estimatedSeconds = 180;
-    }
+    activeDeadline.startTime = Date.now();
+    activeDeadline.estimatedSeconds = activeDeadline.estimatedSeconds || 180;
   }
 
   console.log(chalk.cyan.bold("\n🤖 Agent started"));

@@ -196,6 +196,8 @@ export async function runOrchestrated(task, baseDir) {
     console.log(chalk.yellow("   ⚠ Not a git repository. Initializing git to support subagents and sandboxes..."));
     try {
       await shell("git init", baseDir);
+      await shell("git config user.email \"xerv.org@gmail.com\"", baseDir);
+      await shell("git config user.name \"Swades Agent\"", baseDir);
       await shell("git add -A", baseDir);
       await shell("git commit --allow-empty -m \"Initial commit by Swades Agent\"", baseDir);
       console.log(chalk.green("   ✅ Git repository initialized successfully."));

@@ -65,6 +65,9 @@ function truncate(str, maxLen) {
 }
 
 async function confirm(message) {
+  if (process.env.AUTO_APPROVE === "true" || process.env.NON_INTERACTIVE === "true" || !process.stdin.isTTY) {
+    return true;
+  }
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((res) => {
     rl.question(`${message} (y/N): `, (answer) => {
@@ -547,8 +550,9 @@ async function patchFileTool({ path, target, replacement }) {
     return `❌ Error: Multiple matches (${occurrences}) of the target block were found. Provide more surrounding lines (context) to make the target block unique.`;
   }
 
-  // Perform single replacement
-  const newContent = normalizedContent.replace(normalizedTarget, normalize(replacement));
+  // Perform single replacement using split/join to avoid '$' replacement pattern expansion
+  const parts = normalizedContent.split(normalizedTarget);
+  const newContent = parts.join(normalize(replacement));
   
   // Write to disk
   await writeFile(fullPath, newContent, "utf-8");

@@ -42,8 +42,11 @@ export async function callLLM(messages, tools, onChunk, modelOverride) {
     messages,
     temperature: 0,
     stream: true,
-    plugins: [{ id: "context-compression" }],
   };
+
+  if (BASE_URL && BASE_URL.includes("openrouter")) {
+    params.plugins = [{ id: "context-compression" }];
+  }
 
   if (tools && tools.length > 0) {
     params.tools = tools;
